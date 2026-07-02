@@ -1,0 +1,5 @@
+find[[:space:]].[[:space:]]-type[[:space:]]f[[:space:]]-exec[[:space:]]du[[:space:]]-h[[:space:]]{}[[:space:]]+[[:space:]]|[[:space:]]sort[[:space:]]-hr[[:space:]]|[[:space:]]head[[:space:]]-20 filter=lfs diff=lfs merge=lfs -text
+/home/jugal/Documents/DataScience/Advanced_RAG/Research_Paper_rag/Experiment_pipeline/experiment_pipeline1_loading_data_and_chunking.ipynb filter=lfs diff=lfs merge=lfs -text
+/home/jugal/Documents/DataScience/Advanced_RAG/Research_Paper_rag/Experiment_pipeline/evaluation.ipynb filter=lfs diff=lfs merge=lfs -text
+/home/jugal/Documents/DataScience/Advanced_RAG/Research_Paper_rag/Experiment_pipeline/qdrant_dense_embeddings.jsonl filter=lfs diff=lfs merge=lfs -text
+/home/jugal/Documents/DataScience/Advanced_RAG/Research_Paper_rag/precessed_data/chunks/image_chunks_v1.json filter=lfs diff=lfs merge=lfs -text
