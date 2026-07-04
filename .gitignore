@@ -15,4 +15,7 @@ FETCH_HEAD
 Latex_code_resume.py
 cover_letter.md
 .lock
+project.md
 Research_Paper_rag/Experiment_pipeline/qdrant_dense_embeddings.jsonl
+**.pdf
+
