@@ -1,3 +1,14 @@
 The User can access his chats after he logins
 Every chat has a chat id which is sent with every prompt to know from wherethe prompt have come from
 for that Chat_id the context from the database is invoked and query will be answered
+
+Runtime packages used by the app:
+- langgraph
+- langgraph-checkpoint-sqlite
+- langchain-nvidia-ai-endpoints
+- qdrant-client
+- sentence-transformers
+- fastembed
+- fastapi
+- uvicorn
+- python-dotenv
