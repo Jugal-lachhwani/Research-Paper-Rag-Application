@@ -18,4 +18,6 @@ cover_letter.md
 project.md
 Research_Paper_rag/Experiment_pipeline/qdrant_dense_embeddings.jsonl
 **.pdf
+__pycache__
+
 
