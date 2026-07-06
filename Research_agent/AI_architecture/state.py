@@ -9,3 +9,5 @@ class GraphState(TypedDict):
     extraction_needed: str
     retrieved_docs: List[Dict[str, Any]]
     relevant_docs: List[Dict[str, Any]]
+    references: List[str]
+    new_docs_to_store: List[Dict[str, Any]]

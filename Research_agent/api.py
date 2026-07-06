@@ -24,6 +24,7 @@ class ChatResponse(BaseModel):
     extraction_needed: Optional[str] = None
     retrieved_docs_count: int = 0
     relevant_docs_count: int = 0
+    references: List[str] = Field(default_factory=list)
     messages: List[Dict[str, Any]] = Field(default_factory=list)
 
 
@@ -33,6 +34,18 @@ class ChatStateResponse(BaseModel):
 
 
 app = FastAPI(title=app_config.APP_NAME)
+
+
+@app.on_event("startup")
+def startup_event():
+    from Research_agent.AI_architecture.models import get_resources
+    logger.info("Starting up application: Pre-loading all AI models and validating API keys...")
+    try:
+        get_resources()
+        logger.info("All models loaded successfully at startup!")
+    except Exception as exc:
+        logger.error(f"CRITICAL ERROR during model loading at startup: {exc}")
+        raise
 
 
 @app.get("/health")
@@ -73,6 +86,7 @@ def chat(request: ChatRequest) -> ChatResponse:
         extraction_needed=final_state.get("extraction_needed"),
         retrieved_docs_count=len(final_state.get("retrieved_docs", [])),
         relevant_docs_count=len(final_state.get("relevant_docs", [])),
+        references=final_state.get("references", []),
         messages=messages,
     )
 

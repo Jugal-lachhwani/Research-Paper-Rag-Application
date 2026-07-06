@@ -100,6 +100,7 @@ def most_relevant(state: GraphState) -> Dict[str, List[Dict[str, Any]]]:
     resources = get_resources()
 
     relevant = []
+    references = []
     for doc in docs:
         content = doc.get("text", "")
         if not content:
@@ -114,21 +115,95 @@ def most_relevant(state: GraphState) -> Dict[str, List[Dict[str, Any]]]:
         except Exception as exc:
             logger.error(f"Error in most_relevant calling small_llm for a doc: {exc}")
             relevant.append(doc)
+            paper_id = doc.get("paperid") or doc.get("paper_id") or doc.get("paperId")
+            if paper_id and paper_id not in references:
+                references.append(paper_id)
             continue
 
         if "yes" in content_resp:
             relevant.append(doc)
+            paper_id = doc.get("paperid") or doc.get("paper_id") or doc.get("paperId")
+            if paper_id and paper_id not in references:
+                references.append(paper_id)
 
-    logger.info(f"--- [LOG] Node 'most_relevant' finished. Filtered down to {len(relevant)} relevant docs (Latency: {time.time() - start_time:.2f}s) ---")
-    return {"relevant_docs": relevant}
+    logger.info(f"--- [LOG] Node 'most_relevant' finished. Filtered down to {len(relevant)} relevant docs, found {len(references)} references (Latency: {time.time() - start_time:.2f}s) ---")
+    return {"relevant_docs": relevant, "references": references}
 
 
-def no_relevant_docs_found(state: GraphState) -> Dict[str, List[Dict[str, str]]]:
-    logger.info("--- [LOG] Node 'no_relevant_docs_found' started ---")
+def web_search_arxiv(state: GraphState) -> Dict[str, Any]:
+    logger.info("--- [LOG] Node 'web_search_arxiv' started ---")
     start_time = time.time()
-    ans = "No relevant docs are found in the database to answer your question."
-    logger.info(f"--- [LOG] Node 'no_relevant_docs_found' finished (Latency: {time.time() - start_time:.2f}s) ---")
-    return {"messages": [{"role": "assistant", "content": ans}]}
+    
+    from Research_agent.AI_architecture.arxiv_utils import process_arxiv_fallback
+    
+    query = state.get("query", "")
+    resources = get_resources()
+    
+    result = process_arxiv_fallback(
+        query=query,
+        small_llm=resources.small_llm,
+        dense_model=resources.dense_model,
+        bm25_model=resources.bm25_model
+    )
+    
+    updates = {}
+    if result:
+        updates["relevant_docs"] = result.get("relevant_docs", [])
+        
+        # Merge references safely
+        existing_refs = state.get("references", [])
+        for ref in result.get("references", []):
+            if ref not in existing_refs:
+                existing_refs.append(ref)
+        updates["references"] = existing_refs
+        
+        updates["new_docs_to_store"] = result.get("new_docs_to_store", [])
+    
+    logger.info(f"--- [LOG] Node 'web_search_arxiv' finished (Latency: {time.time() - start_time:.2f}s) ---")
+    return updates
+
+def store_in_qdrant(state: GraphState) -> Dict[str, Any]:
+    logger.info("--- [LOG] Node 'store_in_qdrant' started ---")
+    start_time = time.time()
+    
+    new_docs = state.get("new_docs_to_store", [])
+    if not new_docs:
+        logger.info("No new docs to store. Skipping.")
+        return {}
+        
+    resources = get_resources()
+    
+    try:
+        from qdrant_client import models
+        points = []
+        for doc in new_docs:
+            dense_vec = doc["vector"]["dense"]
+            bm25_vec = doc["vector"]["bm25"]
+            
+            points.append(
+                models.PointStruct(
+                    id=doc["id"],
+                    payload=doc["payload"],
+                    vector={
+                        "dense": dense_vec,
+                        "bm25": models.SparseVector(
+                            indices=bm25_vec["indices"],
+                            values=bm25_vec["values"]
+                        )
+                    }
+                )
+            )
+            
+        resources.qdrant_client.upload_points(
+            collection_name=qdrant.TEXT_COLLECTION_NAME,
+            points=points
+        )
+        logger.info(f"Successfully stored {len(points)} new points into Qdrant.")
+    except Exception as exc:
+        logger.error(f"Error storing in Qdrant: {exc}")
+        
+    logger.info(f"--- [LOG] Node 'store_in_qdrant' finished (Latency: {time.time() - start_time:.2f}s) ---")
+    return {}
 
 
 def generate_final_ans(state: GraphState) -> Dict[str, List[Dict[str, str]]]:
@@ -237,7 +312,7 @@ def route_after_extraction(state: GraphState) -> str:
 def route_after_relevance(state: GraphState) -> str:
     logger.info("--- [LOG] Router 'route_after_relevance' evaluated ---")
     if not state.get("relevant_docs"):
-        return "no_relevant_docs_found"
+        return "web_search_arxiv"
 
     return "generate_final_ans"
 
