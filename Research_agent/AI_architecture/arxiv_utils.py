@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from opik import track, Prompt
 
 logger = logging.getLogger(__name__)
 
@@ -20,17 +21,19 @@ class PaperSelection(BaseModel):
     selected_index: int = Field(description="The index (1 to N) of the most relevant paper.")
     reasoning: str = Field(description="Why this paper was chosen.")
 
+@track
 def process_arxiv_fallback(query: str, small_llm: Any, dense_model: Any, bm25_model: Any) -> Dict[str, Any]:
     # 1. Ask SLM for search keyword and if latest is needed
-    search_prompt = ChatPromptTemplate.from_messages([
-        ("system", "Extract the core topic/keyword for an academic search from the user's query. Also determine if they are asking for the 'latest', 'newest', or 'recent' papers. Respond in JSON."),
-        ("human", "{query}")
-    ])
+    search_prompt_opik = Prompt(
+        name="Arxiv_Search_Prompt",
+        prompt="""Extract the core topic/keyword for an academic search from the user's query. Also determine if they are asking for the 'latest', 'newest', or 'recent' papers. Respond in JSON.
+        
+User Query: {query}"""
+    )
     structured_search = small_llm.with_structured_output(ArxivSearchQuery)
-    chain = search_prompt | structured_search
     
     try:
-        search_args = chain.invoke({"query": query})
+        search_args = structured_search.invoke(search_prompt_opik.format(query=query))
     except Exception as e:
         logger.error(f"Error extracting search query: {e}")
         return {}
@@ -73,15 +76,19 @@ def process_arxiv_fallback(query: str, small_llm: Any, dense_model: Any, bm25_mo
     for i, paper in enumerate(results, 1):
         titles_context += f"[{i}] Title: {paper.title}\n"
         
-    select_prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an expert AI research assistant. Given a specific topic and a list of paper titles retrieved from a search, select the single most relevant paper. Output the integer index of your choice and a brief reasoning."),
-        ("human", "Topic: {topic}\n\nPapers:\n{titles}")
-    ])
+    select_prompt_opik = Prompt(
+        name="Arxiv_Select_Prompt",
+        prompt="""You are an expert AI research assistant. Given a specific topic and a list of paper titles retrieved from a search, select the single most relevant paper. Output the integer index of your choice and a brief reasoning.
+
+Topic: {topic}
+
+Papers:
+{titles}"""
+    )
     structured_select = small_llm.with_structured_output(PaperSelection)
-    chain_select = select_prompt | structured_select
     
     try:
-        selection = chain_select.invoke({"topic": topic, "titles": titles_context})
+        selection = structured_select.invoke(select_prompt_opik.format(topic=topic, titles=titles_context))
         # Basic bounds check
         if selection.selected_index < 1 or selection.selected_index > len(results):
             best_paper = results[0]

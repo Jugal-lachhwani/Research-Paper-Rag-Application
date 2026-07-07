@@ -6,14 +6,16 @@ from pydantic import BaseModel, Field
 import logging
 import time
 import os
+from Research_agent.config import app_config
+
 import sqlite3
 from fastapi.middleware.cors import CORSMiddleware
+from opik.integrations.langchain import OpikTracer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 from Research_agent.AI_architecture.graph import get_graph_app
-from Research_agent.config import app_config
 
 
 class ChatRequest(BaseModel):
@@ -68,7 +70,13 @@ def chat(request: ChatRequest) -> ChatResponse:
     chat_id = request.chat_id or str(uuid4())
     logger.info(f"Received chat request for chat_id: {chat_id}, query: {request.message}")
     graph_app = get_graph_app()
-    config = {"configurable": {"thread_id": chat_id}}
+    
+    opik_tracer = OpikTracer(project_name=app_config.APP_NAME)
+    
+    config = {
+        "configurable": {"thread_id": chat_id},
+        "callbacks": [opik_tracer]
+    }
 
     initial_state = {
         "query": request.message,

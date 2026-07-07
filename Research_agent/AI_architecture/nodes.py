@@ -14,6 +14,8 @@ from Research_agent.AI_architecture.prompts import (
     GENERATE_WITH_CONTEXT_PROMPT,
     RELEVANCE_PROMPT,
     SUMMARY_PROMPT,
+    SYSTEM_DIRECT_PROMPT,
+    SYSTEM_RAG_PROMPT,
 )
 from Research_agent.AI_architecture.state import GraphState
 from Research_agent.AI_architecture.models import get_resources
@@ -33,11 +35,23 @@ def need_extraction(state: GraphState) -> Dict[str, str]:
         logger.error(f"Error in need_extraction calling small_llm: {exc}")
         extraction_needed = _fallback_extraction_decision(query)
         logger.warning(f"need_extraction failed, using fallback. Decision: {extraction_needed} (Latency: {time.time() - start_time:.2f}s)")
-        return {"extraction_needed": extraction_needed}
+        return {
+            "extraction_needed": extraction_needed,
+            "references": [],
+            "retrieved_docs": [],
+            "relevant_docs": [],
+            "new_docs_to_store": []
+        }
 
     extraction_needed = "Yes" if "yes" in content else "No"
     logger.info(f"--- [LOG] Node 'need_extraction' finished. Decision: {extraction_needed} (Latency: {time.time() - start_time:.2f}s) ---")
-    return {"extraction_needed": extraction_needed}
+    return {
+        "extraction_needed": extraction_needed,
+        "references": [],
+        "retrieved_docs": [],
+        "relevant_docs": [],
+        "new_docs_to_store": []
+    }
 
 def retrieve_docs(state: GraphState) -> Dict[str, List[Dict[str, Any]]]:
     logger.info("--- [LOG] Node 'retrieve_docs' started ---")
@@ -216,13 +230,13 @@ def generate_final_ans(state: GraphState) -> Dict[str, List[Dict[str, str]]]:
     resources = get_resources()
 
     if extraction_needed == "No":
-        system_content = "You are a helpful and intelligent assistant. Please answer the user's question directly and concisely."
+        system_content = SYSTEM_DIRECT_PROMPT.format()
     else:
         context = "\n---\n".join(doc.get("text", "") for doc in relevant_docs)
         if _estimate_token_count(context) > app_config.SUMMARY_TOKEN_LIMIT:
             context = summarize_context_tool(context)
         
-        system_content = f"You are an expert research assistant. Answer the user's question based strictly on the provided context below.\nIf the context does not contain enough information to answer the question, state that you do not have enough information.\n\nContext:\n{context}"
+        system_content = SYSTEM_RAG_PROMPT.format(context=context)
 
     langchain_messages = [SystemMessage(content=system_content)]
     
