@@ -86,3 +86,4 @@ uvicorn Research_agent.api:app --host 127.0.0.1 --port 8002 --reload
 4. **`web_search_arxiv`**: Triggered only if `most_relevant` returns 0 documents. It searches arXiv, downloads a PDF, generates vectors locally, and queues them for storage.
 5. **`generate_final_ans`**: Drafts a comprehensive answer based on the context (either from Qdrant or arXiv).
 6. **`store_in_qdrant`**: Permanently uploads newly embedded arXiv vectors to Qdrant.
+

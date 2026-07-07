@@ -4,6 +4,31 @@ Building a robust Research Paper RAG application isn't just about throwing text 
 
 To manage this complex state machine, I utilized **LangGraph**, which allows us to define the AI agent's workflow as a directed graph. 
 
+### Architecture Diagram
+
+```mermaid
+graph TD
+    User([User Query]) --> Cache{Semantic Cache<br/>(Redis)}
+    Cache -- Hit --> Return([Return Cached Response])
+    Cache -- Miss --> Route{Needs Retrieval?}
+    
+    Route -- No --> Generate[Final Answer Generation]
+    Route -- Yes --> Hybrid[(Local Hybrid Retrieval<br/>Qdrant: Dense + Sparse)]
+    
+    Hybrid --> Filter{Relevancy Filter}
+    Filter -- Relevant --> Generate
+    
+    Filter -- Not Relevant --> Arxiv[ArXiv Web Search Fallback]
+    Arxiv --> Top5[Fetch Top 5 Papers]
+    Top5 --> Select[LLM Selects Best Paper]
+    Select --> Embed[Download, Chunk, & Embed]
+    Embed --> Store[(Store new chunks<br/>in Qdrant)]
+    Store --> Generate
+    
+    Generate --> PopulateCache[(Populate Redis Cache)]
+    PopulateCache --> Return
+```
+
 Here is a step-by-step breakdown of the AI Architecture from the moment a user submits a query:
 
 ### 1. The Entry Point & Semantic Caching
@@ -43,4 +68,8 @@ Finally, the most relevant chunks (either from local Qdrant or dynamically pulle
 - The LLM synthesizes the information and generates a comprehensive, highly accurate response for the user, complete with references.
 - Before returning the response to the user, the original query, its embedding, and the final answer are saved into the **Redis Semantic Cache**.
 
-By combining Semantic Caching, Hybrid Retrieval, Relevancy Filtering, and Dynamic Fallback, this architecture ensures maximum accuracy while optimizing for both speed and cost!
+By combining Semantic Caching, Hybrid Retrieval, Relevancy Filtering, and Dynamic Fallback, this architecture ensures maximum accuracy while optimizing for both speed and cost!\
+
+
+
+![alt text](Workflow.png)
