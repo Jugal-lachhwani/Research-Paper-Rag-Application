@@ -20,4 +20,5 @@ Research_Paper_rag/Experiment_pipeline/qdrant_dense_embeddings.jsonl
 **.pdf
 __pycache__
 
-
+checkpoints.sqlite-wal
+checkpoints.sqlite-shm

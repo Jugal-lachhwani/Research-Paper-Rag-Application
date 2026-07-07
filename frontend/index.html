@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Agent - Chat</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Markdown Library -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <button id="new-chat-btn" class="new-chat-btn">
+                    <i class="ph ph-plus"></i> New Chat
+                </button>
+            </div>
+            
+            <div class="sidebar-nav">
+                <p class="nav-title">Previous Chats</p>
+                <ul id="chat-history-list" class="chat-list">
+                    <!-- Chat items will be injected here via JS -->
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="main-content">
+            <header class="mobile-header">
+                <button id="toggle-sidebar" class="icon-btn">
+                    <i class="ph ph-list"></i>
+                </button>
+                <h2>Research Agent</h2>
+            </header>
+
+            <div id="chat-container" class="chat-container">
+                <!-- Welcome screen for new chat -->
+                <div id="welcome-screen" class="welcome-screen">
+                    <i class="ph-duotone ph-atom"></i>
+                    <h1>How can I help with your research today?</h1>
+                </div>
+
+                <!-- Messages will be appended here -->
+                <div id="messages-wrapper" class="messages-wrapper" style="display: none;"></div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <form id="chat-form" class="input-form">
+                    <textarea 
+                        id="chat-input" 
+                        placeholder="Message Research Agent..." 
+                        rows="1"
+                        required></textarea>
+                    <button type="submit" id="send-btn" class="send-btn" disabled>
+                        <i class="ph-fill ph-arrow-circle-up"></i>
+                    </button>
+                </form>
+                <div class="footer-text">
+                    Research Agent can make mistakes. Verify important information.
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

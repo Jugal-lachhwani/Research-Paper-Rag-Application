@@ -5,6 +5,9 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 import logging
 import time
+import os
+import sqlite3
+from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -35,6 +38,13 @@ class ChatStateResponse(BaseModel):
 
 app = FastAPI(title=app_config.APP_NAME)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 def startup_event():
@@ -104,6 +114,23 @@ def get_chat_state(chat_id: str) -> ChatStateResponse:
         chat_id=chat_id,
         state=snapshot.values,
     )
+
+
+@app.get("/chats", response_model=List[str])
+def get_all_chats() -> List[str]:
+    """Retrieve all unique chat IDs from the SQLite checkpoints database."""
+    try:
+        db_path = os.path.join(os.path.dirname(__file__), "checkpoints.sqlite")
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT thread_id FROM checkpoints")
+        rows = cursor.fetchall()
+        chat_ids = [row[0] for row in rows if row[0]]
+        conn.close()
+        return chat_ids
+    except Exception as exc:
+        logger.error(f"Error fetching chat IDs from database: {exc}")
+        raise HTTPException(status_code=500, detail="Could not fetch chat history")
 
 
 def _latest_assistant_message(messages: List[Dict[str, Any]]) -> str:
