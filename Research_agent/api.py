@@ -71,7 +71,7 @@ import opik
 from opik import track
 
 @app.post("/chat", response_model=ChatResponse)
-@track(name="chat_endpoint")
+@track(name="chat_endpoint", project_name=app_config.APP_NAME)
 def chat(request: ChatRequest) -> ChatResponse:
     from Research_agent.AI_architecture.models import get_resources
     from Research_agent.AI_architecture.semantic_cache import check_semantic_cache, store_semantic_cache, get_cache_size
