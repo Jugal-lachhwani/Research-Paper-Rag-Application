@@ -25,10 +25,10 @@ class PaperSelection(BaseModel):
 def process_arxiv_fallback(query: str, small_llm: Any, dense_model: Any, bm25_model: Any) -> Dict[str, Any]:
     # 1. Ask SLM for search keyword and if latest is needed
     search_prompt_opik = Prompt(
-        name="Arxiv_Search_Prompt",
+        name="Project_Arxiv_Search_Prompt",
         prompt="""Extract the core topic/keyword for an academic search from the user's query. Also determine if they are asking for the 'latest', 'newest', or 'recent' papers. Respond in JSON.
         
-User Query: {query}"""
+User Query: {{query}}"""
     )
     structured_search = small_llm.with_structured_output(ArxivSearchQuery)
     
@@ -77,13 +77,13 @@ User Query: {query}"""
         titles_context += f"[{i}] Title: {paper.title}\n"
         
     select_prompt_opik = Prompt(
-        name="Arxiv_Select_Prompt",
+        name="Project_Arxiv_Select_Prompt",
         prompt="""You are an expert AI research assistant. Given a specific topic and a list of paper titles retrieved from a search, select the single most relevant paper. Output the integer index of your choice and a brief reasoning.
 
-Topic: {topic}
+Topic: {{topic}}
 
 Papers:
-{titles}"""
+{{titles}}"""
     )
     structured_select = small_llm.with_structured_output(PaperSelection)
     
