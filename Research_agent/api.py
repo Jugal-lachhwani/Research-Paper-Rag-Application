@@ -51,9 +51,11 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     from Research_agent.AI_architecture.models import get_resources
+    from Research_agent.AI_architecture.semantic_cache import init_redis_index
     logger.info("Starting up application: Pre-loading all AI models and validating API keys...")
     try:
         get_resources()
+        init_redis_index()
         logger.info("All models loaded successfully at startup!")
     except Exception as exc:
         logger.error(f"CRITICAL ERROR during model loading at startup: {exc}")
@@ -65,10 +67,60 @@ def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
+import opik
+from opik import track
+
 @app.post("/chat", response_model=ChatResponse)
+@track(name="chat_endpoint")
 def chat(request: ChatRequest) -> ChatResponse:
+    from Research_agent.AI_architecture.models import get_resources
+    from Research_agent.AI_architecture.semantic_cache import check_semantic_cache, store_semantic_cache, get_cache_size
+    from opik import opik_context
+    
     chat_id = request.chat_id or str(uuid4())
     logger.info(f"Received chat request for chat_id: {chat_id}, query: {request.message}")
+    
+    resources = get_resources()
+    
+    # 1. Semantic Caching
+    start_time = time.time()
+    query_emb = resources.dense_model.encode([request.message])[0]
+    
+    cache_hit = check_semantic_cache(query_emb)
+    cache_lookup_latency = time.time() - start_time
+    
+    if cache_hit:
+        logger.info(f"Semantic Cache HIT for chat_id: {chat_id}")
+        answer = cache_hit["answer"]
+        similarity = cache_hit["similarity"]
+        
+        try:
+            opik_context.update_current_trace(metadata={
+                "cache_hit": True,
+                "cache_similarity_score": similarity,
+                "cache_lookup_latency": cache_lookup_latency,
+                "cached_entries_count": get_cache_size()
+            })
+        except Exception as e:
+            logger.error(f"Opik logging error: {e}")
+            
+        messages = [
+            {"role": "user", "content": request.message},
+            {"role": "assistant", "content": answer}
+        ]
+        
+        return ChatResponse(
+            chat_id=chat_id,
+            answer=answer,
+            extraction_needed="No",
+            retrieved_docs_count=0,
+            relevant_docs_count=0,
+            references=[],
+            messages=messages,
+        )
+
+    # 2. Semantic Cache MISS - Invoke LangGraph
+    logger.info(f"Semantic Cache MISS for chat_id: {chat_id}. Invoking graph.")
     graph_app = get_graph_app()
     
     opik_tracer = OpikTracer(project_name=app_config.APP_NAME)
@@ -84,8 +136,6 @@ def chat(request: ChatRequest) -> ChatResponse:
     }
 
     try:
-        logger.info(f"Invoking graph for chat_id: {chat_id}")
-        start_time = time.time()
         final_state = graph_app.invoke(initial_state, config=config)
         latency = time.time() - start_time
         logger.info(f"Graph invocation completed for chat_id: {chat_id} in {latency:.2f} seconds")
@@ -95,6 +145,18 @@ def chat(request: ChatRequest) -> ChatResponse:
 
     messages = final_state.get("messages", [])
     answer = _latest_assistant_message(messages)
+    
+    # Store result in Semantic Cache
+    store_semantic_cache(request.message, answer, query_emb)
+    
+    try:
+        opik_context.update_current_trace(metadata={
+            "cache_hit": False,
+            "cache_lookup_latency": cache_lookup_latency,
+            "cached_entries_count": get_cache_size()
+        })
+    except Exception as e:
+        logger.error(f"Opik logging error: {e}")
     
     logger.info(f"Returning response for chat_id: {chat_id}")
 
