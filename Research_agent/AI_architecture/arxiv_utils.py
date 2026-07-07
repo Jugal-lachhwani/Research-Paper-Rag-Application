@@ -160,7 +160,7 @@ Papers:
             },
             "vector": {
                 "dense": dense_vec,
-                "bm25": {
+                "sparse": {
                     "indices": bm25_indices,
                     "values": bm25_values
                 }

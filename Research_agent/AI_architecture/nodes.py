@@ -192,7 +192,7 @@ def store_in_qdrant(state: GraphState) -> Dict[str, Any]:
         points = []
         for doc in new_docs:
             dense_vec = doc["vector"]["dense"]
-            bm25_vec = doc["vector"]["bm25"]
+            bm25_vec = doc["vector"]["sparse"]
             
             points.append(
                 models.PointStruct(
@@ -200,7 +200,7 @@ def store_in_qdrant(state: GraphState) -> Dict[str, Any]:
                     payload=doc["payload"],
                     vector={
                         "dense": dense_vec,
-                        "bm25": models.SparseVector(
+                        "sparse": models.SparseVector(
                             indices=bm25_vec["indices"],
                             values=bm25_vec["values"]
                         )
