@@ -26,7 +26,7 @@ flowchart TD
     Q([User query]) --> C{Semantic cache<br/>Redis, cosine ≥ 0.90}
     C -- hit --> R([Cached answer])
     C -- miss --> N{Needs retrieval?<br/>small LLM router}
-    N -- no, e.g. "Hi" --> G[Generate answer]
+    N -- no --> G[Generate answer]
     N -- yes --> H[Hybrid retrieval<br/>Qdrant: dense 0.4 + BM25 0.6]
     H --> F{Relevancy filter<br/>LLM judges each chunk}
     F -- relevant --> G
