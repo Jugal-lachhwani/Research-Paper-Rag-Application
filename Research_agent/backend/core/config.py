@@ -3,8 +3,8 @@ from pathlib import Path
 import os
 
 
-BASE_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = BASE_DIR.parent
+BASE_DIR = Path(__file__).resolve().parents[2]  # Research_agent/
+PROJECT_ROOT = BASE_DIR.parent  # repo root, where .env lives
 CHECKPOINT_DB_PATH = BASE_DIR / "checkpoints.sqlite"
 
 
@@ -41,7 +41,7 @@ class qdrant:
 
 @dataclass
 class vlm_model:
-    VLM_MODEl = "llama-3.3-70b-versatile"
+    VLM_MODEl = "openai/gpt-oss-120b"
 
 @dataclass
 class embedding_model:
@@ -52,7 +52,7 @@ class embedding_model:
 
 @dataclass
 class small_llm_config:
-    MODEL_NAME = "llama-3.1-8b-instant"
+    MODEL_NAME = "openai/gpt-oss-20b"
 
 
 @dataclass

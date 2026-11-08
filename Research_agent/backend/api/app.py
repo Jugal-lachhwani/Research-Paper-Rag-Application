@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 import logging
 import time
 import os
-from Research_agent.config import app_config
+from Research_agent.backend.core.config import app_config, CHECKPOINT_DB_PATH
 
 import sqlite3
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,7 +15,8 @@ from opik.integrations.langchain import OpikTracer
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-from Research_agent.AI_architecture.graph import get_graph_app
+from Research_agent.backend.AI_architecture.graph import get_graph_app
+from Research_agent.backend.AI_architecture.nodes import LLM_FAILURE_PREFIX
 
 
 class ChatRequest(BaseModel):
@@ -50,8 +51,8 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup_event():
-    from Research_agent.AI_architecture.models import get_resources
-    from Research_agent.AI_architecture.semantic_cache import init_redis_index
+    from Research_agent.backend.AI_architecture.models import get_resources
+    from Research_agent.backend.AI_architecture.semantic_cache import init_redis_index
     logger.info("Starting up application: Pre-loading all AI models and validating API keys...")
     try:
         get_resources()
@@ -73,8 +74,8 @@ from opik import track
 @app.post("/chat", response_model=ChatResponse)
 @track(name="chat_endpoint", project_name=app_config.APP_NAME)
 def chat(request: ChatRequest) -> ChatResponse:
-    from Research_agent.AI_architecture.models import get_resources
-    from Research_agent.AI_architecture.semantic_cache import check_semantic_cache, store_semantic_cache, get_cache_size
+    from Research_agent.backend.AI_architecture.models import get_resources
+    from Research_agent.backend.AI_architecture.semantic_cache import check_semantic_cache, store_semantic_cache, get_cache_size
     from opik import opik_context
     
     chat_id = request.chat_id or str(uuid4())
@@ -146,8 +147,11 @@ def chat(request: ChatRequest) -> ChatResponse:
     messages = final_state.get("messages", [])
     answer = _latest_assistant_message(messages)
     
-    # Store result in Semantic Cache
-    store_semantic_cache(request.message, answer, query_emb)
+    # Store result in Semantic Cache (never cache a failed generation)
+    if answer.startswith(LLM_FAILURE_PREFIX):
+        logger.warning(f"Generation failed for chat_id: {chat_id}; skipping semantic cache write.")
+    else:
+        store_semantic_cache(request.message, answer, query_emb)
     
     try:
         opik_context.update_current_trace(metadata={
@@ -190,8 +194,7 @@ def get_chat_state(chat_id: str) -> ChatStateResponse:
 def get_all_chats() -> List[str]:
     """Retrieve all unique chat IDs from the SQLite checkpoints database."""
     try:
-        db_path = os.path.join(os.path.dirname(__file__), "checkpoints.sqlite")
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(CHECKPOINT_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT thread_id FROM checkpoints")
         rows = cursor.fetchall()

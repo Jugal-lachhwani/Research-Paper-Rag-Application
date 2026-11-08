@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from threading import Lock
 from typing import Any
 
-from Research_agent.config import (
+from Research_agent.backend.core.config import (
     embedding_model,
     qdrant,
     small_llm_config,

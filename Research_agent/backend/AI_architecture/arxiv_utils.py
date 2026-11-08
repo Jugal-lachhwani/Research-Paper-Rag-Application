@@ -55,7 +55,12 @@ User Query: {{query}}"""
         sort_order=arxiv.SortOrder.Descending
     )
     
-    results = list(client.results(search))
+    try:
+        results = list(client.results(search))
+    except Exception as e:
+        logger.error(f"Error calling arXiv API for exact query: {e}")
+        return {}
+
     if not results:
         logger.warning(f"No papers found on arXiv for exact phrase '{topic}'. Retrying with broad search...")
         broad_query = f"all:{topic}"
@@ -65,7 +70,11 @@ User Query: {{query}}"""
             sort_by=sort_criterion,
             sort_order=arxiv.SortOrder.Descending
         )
-        results = list(client.results(broad_search))
+        try:
+            results = list(client.results(broad_search))
+        except Exception as e:
+            logger.error(f"Error calling arXiv API for broad query: {e}")
+            return {}
         
         if not results:
             logger.warning("Still no papers found on arXiv with broad search.")

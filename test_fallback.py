@@ -1,6 +1,6 @@
 import asyncio
-from Research_agent.AI_architecture.models import get_resources
-from Research_agent.AI_architecture.arxiv_utils import process_arxiv_fallback
+from Research_agent.backend.AI_architecture.models import get_resources
+from Research_agent.backend.AI_architecture.arxiv_utils import process_arxiv_fallback
 
 def run_test():
     resources = get_resources()

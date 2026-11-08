@@ -6,7 +6,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 # pyrefly: ignore [missing-import]
 from langgraph.graph import END, START, StateGraph
 
-from Research_agent.AI_architecture.nodes import (
+from Research_agent.backend.AI_architecture.nodes import (
     generate_final_ans,
     most_relevant,
     need_extraction,
@@ -16,8 +16,8 @@ from Research_agent.AI_architecture.nodes import (
     route_after_extraction,
     route_after_relevance,
 )
-from Research_agent.AI_architecture.state import GraphState
-from Research_agent.config import CHECKPOINT_DB_PATH
+from Research_agent.backend.AI_architecture.state import GraphState
+from Research_agent.backend.core.config import CHECKPOINT_DB_PATH
 
 
 def build_workflow() -> StateGraph:

@@ -8,7 +8,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 logger = logging.getLogger(__name__)
 
-from Research_agent.AI_architecture.prompts import (
+from Research_agent.backend.AI_architecture.prompts import (
     EXTRACTION_PROMPT,
     GENERATE_DIRECT_PROMPT,
     GENERATE_WITH_CONTEXT_PROMPT,
@@ -17,9 +17,9 @@ from Research_agent.AI_architecture.prompts import (
     SYSTEM_DIRECT_PROMPT,
     SYSTEM_RAG_PROMPT,
 )
-from Research_agent.AI_architecture.state import GraphState
-from Research_agent.AI_architecture.models import get_resources
-from Research_agent.config import app_config, qdrant
+from Research_agent.backend.AI_architecture.state import GraphState
+from Research_agent.backend.AI_architecture.models import get_resources
+from Research_agent.backend.core.config import app_config, qdrant
 
 
 def need_extraction(state: GraphState) -> Dict[str, str]:
@@ -148,7 +148,7 @@ def web_search_arxiv(state: GraphState) -> Dict[str, Any]:
     logger.info("--- [LOG] Node 'web_search_arxiv' started ---")
     start_time = time.time()
     
-    from Research_agent.AI_architecture.arxiv_utils import process_arxiv_fallback
+    from Research_agent.backend.AI_architecture.arxiv_utils import process_arxiv_fallback
     
     query = state.get("query", "")
     resources = get_resources()
@@ -303,9 +303,12 @@ def _fallback_extraction_decision(query: str) -> str:
     return "Yes" if len(normalized.split()) > 4 else "No"
 
 
+LLM_FAILURE_PREFIX = "The language model request failed while generating the answer."
+
+
 def _llm_failure_message(exc: Exception) -> str:
     return (
-        "The NVIDIA model request failed while generating the answer. "
+        f"{LLM_FAILURE_PREFIX} "
         "Please retry the same chat message in a moment. "
         f"Error: {type(exc).__name__}: {exc}"
     )
